@@ -22,16 +22,39 @@ class PaymentController extends Controller
     {
         $alipay = Pay::alipay();
         $data = $alipay->verify();
-
         // 1
         // 2
         // 3
-
         return $alipay->success();
     }
 
     public function return()
     {
         return '支付成功';
+    }
+
+    public function wechatPay()
+    {
+        $payment = Pay::wechat();
+
+        $order = [
+            'out_trade_no' => time(),
+            'body' => 'subject-测试',
+            'total_fee'      => '1',
+        ];
+
+        $result = $payment->scan($order);
+
+        dd($result);
+    }
+
+    public function wechatNotify()
+    {
+        $alipay = Pay::wechat();
+        $data = $alipay->verify();
+        // 1
+        // 2
+        // 3
+        return $alipay->success();
     }
 }
