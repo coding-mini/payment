@@ -55,7 +55,7 @@ class PaymentController extends Controller
 
         $data = Pay::wechat()->verify();
 
-
+        dd($payment->success());
         return $payment->success();
 
     }
