@@ -45,6 +45,8 @@ class PaymentController extends Controller
 
         $qr = $result->code_url;
 
+        return view('payments.wechat.scan',compact('qr','order'));
+
     }
 
     public function wechatNotify()
