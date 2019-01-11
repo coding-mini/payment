@@ -2,60 +2,120 @@
 
 namespace App\Http\Controllers;
 
+use App\Book;
+use App\Order;
 use Illuminate\Http\Request;
 use Pay;
 
 class PaymentController extends Controller
 {
-    public function alipay()
+    public function placeOrder(Book $book)
     {
-        $order = [
-            'out_trade_no' => time(),
-            'total_amount' => '1',
-            'subject' => 'test subject - 测试',
-        ];
-
-        return Pay::alipay()->wap($order);
+        $order = Order::create([
+            'user_id' => auth()->id(),
+            'status'  => 'pending',
+            'trade_no' => uniqid(time()),
+            'book_id'   => $book->id,
+            'price'     => $book->price,
+            'remark'    => auth()->user()->name.' 想要购买 '.$book->name
+        ]);
+        return view('payments.buy',compact('book','order'));
     }
 
-    public function notify()
+    public function alipayScan(Order $order)
     {
-        $alipay = Pay::alipay();
-        $data = $alipay->verify();
-        // 1
-        // 2
-        // 3
-        return $alipay->success();
+        $payment = Pay::alipay();
+
+        return $payment->web([
+            'out_trade_no' => $order->trade_no,
+            'total_amount' => $order->price,
+            'subject'      => $order->remark
+        ]);
     }
 
-    public function return()
+    public function alipayNotify()
     {
-        return '支付成功';
+        $payment = Pay::alipay();
+        $data = $payment->verify();
+
+        $trade_no = $data->out_trade_no;
+        $order  = Order::where('trade_no',$trade_no)->first();
+
+        if(!$order)
+            return 'fail';
+
+        $order->update([
+            'status' => 'paid'
+        ]);
+
+        return $payment->success();
     }
 
-    public function wechatPay()
+    public function alipayReturn()
+    {
+        $payment = Pay::alipay();
+        $data = $payment->verify();
+
+        $trade_no = $data->out_trade_no;
+        $order  = Order::where('trade_no',$trade_no)->first();
+
+        dd($order->remark.' 购买成功');
+    }
+
+    public function wechatScan(Order $order)
     {
         $payment = Pay::wechat();
 
-        $order = [
-            'out_trade_no' => time(),
-            'body' => 'subject-测试',
-            'total_fee'      => '1',
-        ];
+        $result = $payment->scan([
+            'out_trade_no' => $order->trade_no,
+            'total_fee'    => (int) $order->price*100,
+            'body'         => $order->remark
+        ]);
 
-        $result = $payment->scan($order);
         $qr_code = $result->code_url;
 
-        return view('payments.wechat.scan',compact('qr_code'));
+        return view('payments.wechat.scan',compact('qr_code','order'));
     }
 
     public function wechatNotify()
     {
-        $alipay = Pay::wechat();
-        $data = $alipay->verify();
-        // 1
-        // 2
-        // 3
-        return $alipay->success();
+        $payment = Pay::wechat();
+        $data = $payment->verify();
+
+        if ($data->result_code === 'SUCCESS' && $data->return_code === 'SUCCESS') {
+            $trade_no = $data->out_trade_no;
+            $order  = Order::where('trade_no',$trade_no)->first();
+
+            if(!$order)
+                return 'fail';
+
+            $order->update([
+                'status' => 'paid'
+            ]);
+        }
+
+        return $payment->success();
+    }
+
+    public function ajaxOrderStatus(Request $request)
+    {
+        if ($request->ajax()) {
+            $order = Order::find($request->order_id);
+            if (!order) {
+                return response()->json([
+                    'status'  => 'failed'
+                ]);
+            }
+            return response()->json([
+                'status'  => $order->status
+            ]);
+        }
+
+        return 'not ajax requst';
+    }
+
+    public function wechatReturn()
+    {
+        return 'success';
     }
 }
