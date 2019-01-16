@@ -4,13 +4,16 @@
         {!! QrCode::size(400)->generate($qr_code); !!}
         <p>请使用微信完成扫码支付</p>
     </div>
+
+    <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+
     <script>
         $(function () {
             let home = '{!! url('') !!}';
             let timer = setInterval(()=>{
                 $.ajax({
                     type: 'POST',
-                    url : home + 'ajax/order_status',
+                    url : home + '/ajax/order_status',
                     data: {
                         '_token'   : '{!! csrf_token() !!}',
                         'order_id' : '{!! $order->id !!}'

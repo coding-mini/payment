@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Book;
 use App\Order;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Pay;
 
 class PaymentController extends Controller
@@ -101,7 +102,7 @@ class PaymentController extends Controller
     {
         if ($request->ajax()) {
             $order = Order::find($request->order_id);
-            if (!order) {
+            if (!$order) {
                 return response()->json([
                     'status'  => 'failed'
                 ]);
